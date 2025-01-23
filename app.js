@@ -1,10 +1,15 @@
 const express = require("express"); //express as middleware for hosting the server
 const mongoose = require("mongoose"); //another middleware that makes it easier to interface with a mongoDB database
 const bodyParser = require("body-parser"); //takes the body of the HTML or JSON document and parses it so we can use the data
+//Added
+const path = require("path"); //part of express
 
 const app = express();
 const port = process.env.port||3000; //if not environment, default to 3000
 //const port = 3000;
+
+//Create public folder as static
+app.use(express.static(path.join(__dirname, "public")));
 
 //Set up middleware to parse json requests
 app.use(bodyParser.json());
@@ -38,7 +43,8 @@ const Person = mongoose.model("Person", peopleSchema, "peopledata"); //use Perso
 
 //App Routes
 app.get("/", (req,res)=>{
-    res.send("Server is working");
+    res.sendFile("index.html"); //Added
+    //res.send("Server is working");
 });
 
 //Read Routes (GET)
@@ -71,7 +77,8 @@ app.post("/addperson", async (req, res)=>{
     try{
         const newPerson = new Person(req.body); //create new instance of a person
         const savePerson = await newPerson.save(); //save the new person
-        res.status(201).json(savePerson);
+        //res.status(201).json(savePerson);
+        res.redirect("/");
         console.log(savePerson); //log the data that got saved
     } catch(err){
         res.status(500).json({error:"Failed to add new person."});
