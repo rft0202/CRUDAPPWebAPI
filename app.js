@@ -1,20 +1,46 @@
 const express = require("express"); //express as middleware for hosting the server
 const mongoose = require("mongoose"); //another middleware that makes it easier to interface with a mongoDB database
 const bodyParser = require("body-parser"); //takes the body of the HTML or JSON document and parses it so we can use the data
-//Added
 const path = require("path"); //part of express
+//Added - Login
+//*6
+const session = require("express-session");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 const port = process.env.port||3000; //if not environment, default to 3000
 //const port = 3000;
 
 //Create public folder as static
+//*4
 app.use(express.static(path.join(__dirname, "public")));
 
 //Set up middleware to parse json requests
 app.use(bodyParser.json());
-//Added
+//Needed for Add to List
 app.use(express.urlencoded({extended:true}));
+
+//Added - Login
+//*7
+//Sets up session variable
+app.use(session({
+    secret: "12345",
+    resave:false,
+    saveUninitialized:true,
+    cookie:{secure:false} //set to true if using https (aka have a ssl certificate)
+}));
+
+//Create a fake user in our database
+const user = {
+    admin:bcrypt.hashSync("12345", 10) //(secret/password, default hash value?)
+};
+
+//Check Authentication
+function isAuthenticated(req,res,next){
+    if(req.session.user) return next; //valid credentials, let them pass
+    res.redirect("/login"); //not valid credentials, redirect back to login page
+};
+//
 
 //MongoDB connection setup
 const mongoURI = "mongodb://localhost:27017/crudapp"; // slash database //default URI
@@ -43,9 +69,19 @@ const Person = mongoose.model("Person", peopleSchema, "peopledata"); //use Perso
 
 //App Routes
 app.get("/", (req,res)=>{
-    res.sendFile("index.html"); //Added
-    //res.send("Server is working");
+    res.sendFile("index.html"); 
 });
+
+//*8
+//Added - Login
+app.get("/users", isAuthenticated, (req,res)=>{
+    res.sendFile("users.html"); 
+});
+
+app.get("/login", (req,res)=>{
+    res.sendFile(path.join(__dirname + "/public/login.html"));
+});
+//
 
 //Read Routes (GET)
 app.get("/people", async (req, res)=>{
@@ -83,6 +119,20 @@ app.post("/addperson", async (req, res)=>{
     } catch(err){
         res.status(500).json({error:"Failed to add new person."});
     }
+});
+
+//Added - Login (not working rn)
+//*9
+app.post("/login", (req, res)=>{
+    const {username, password} = req.body;
+    console.log(req.body);
+    if(user[username] && bcrypt.compareSync(password, user[username])){
+        req.session.user = username;
+        res.redirect("/users");
+    }
+    //Not valid
+    req.session.error = "Invalid User";
+    res.redirect("/login");
 });
 
 //Update Route (PUT)
