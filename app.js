@@ -6,6 +6,10 @@ const path = require("path"); //part of express
 //*6
 const session = require("express-session");
 const bcrypt = require("bcryptjs");
+//*11
+//Added - Registering Users
+const User = require("./models/User");
+const Person = require("./models/Person");
 
 const app = express();
 const port = process.env.port||3000; //if not environment, default to 3000
@@ -31,9 +35,10 @@ app.use(session({
 }));
 
 //Create a fake user in our database
-const user = {
-    admin:bcrypt.hashSync("12345", 10) //(secret/password, default hash value?)
-};
+//*13 - MODIFIED - Commented out for Registering Users
+// const user = {
+//     admin:bcrypt.hashSync("12345", 10) //(secret/password, default hash value?)
+// };
 
 //Check Authentication
 function isAuthenticated(req,res,next){
@@ -59,13 +64,14 @@ db.once("open", ()=>{
 });
 
 //Setup Mongoose Schema
-const peopleSchema = new mongoose.Schema({ //basic template for the data we're trying to retrieve from db
-    firstname:String,
-    lastname:String,
-    email:String
-}); 
+//*10 - MODIFIED - Moved to Person.js
+// const peopleSchema = new mongoose.Schema({ //basic template for the data we're trying to retrieve from db
+//     firstname:String,
+//     lastname:String,
+//     email:String
+// }); 
 
-const Person = mongoose.model("Person", peopleSchema, "peopledata"); //use Person to call mongoDB commands //something, schema, name of collection
+// const Person = mongoose.model("Person", peopleSchema, "peopledata"); //use Person to call mongoDB commands //something, schema, name of collection
 
 //App Routes
 app.get("/", (req,res)=>{
@@ -80,6 +86,34 @@ app.get("/users", isAuthenticated, (req,res)=>{
 
 app.get("/login", (req,res)=>{
     res.sendFile(path.join(__dirname + "/public/login.html"));
+});
+//
+
+//Added - Register user
+//*12
+app.get("/register", (req,res)=>{
+    res.sendFile(path.join(__dirname, "public", "register.html"));
+});
+
+app.post("/register", async (req,res)=>{
+    try{
+        const {username, password, email} = req.body;
+
+        const existingUser = await User.findOne({username});
+
+        if(existingUser){
+            return res.send("Username already taken. Try a different one");
+        }
+
+        const hashedPassword = bcrypt.hashSync(password, 10); //Create hashed password //num is how encrypted you want it to be
+        const newUser = new User({username, password:hashedPassword, email});
+        await newUser.save();
+
+        res.redirect("/login");
+
+    }catch(err){
+        res.status(500).send("Error registering new user.");
+    }
 });
 //
 
@@ -123,10 +157,26 @@ app.post("/addperson", async (req, res)=>{
 
 //Added - Login
 //*9
-app.post("/login", (req, res)=>{
+// app.post("/login", (req, res)=>{
+//     const {username, password} = req.body;
+//     console.log(req.body);
+//     if(user[username] && bcrypt.compareSync(password, user[username])){
+//         req.session.user = username;
+//         return res.redirect("/users");
+//     }
+//     //Not valid login
+//     req.session.error = "Invalid User";
+//     return res.redirect("/login");
+// });
+
+//MODIFIED for Registering User
+//*14
+app.post("/login", async (req, res)=>{
     const {username, password} = req.body;
     console.log(req.body);
-    if(user[username] && bcrypt.compareSync(password, user[username])){
+
+    const user = await User.findOne({username});
+    if(user && bcrypt.compareSync(password, user.password)){ //Check if password in db and inputted password match
         req.session.user = username;
         return res.redirect("/users");
     }
@@ -134,8 +184,10 @@ app.post("/login", (req, res)=>{
     req.session.error = "Invalid User";
     return res.redirect("/login");
 });
+//
 
 //Added - Logout
+//*9
 app.get("/logout", (req,res)=>{
     req.session.destroy(()=>{
         res.redirect("/login")
