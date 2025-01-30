@@ -37,8 +37,8 @@ const user = {
 
 //Check Authentication
 function isAuthenticated(req,res,next){
-    if(req.session.user) return next; //valid credentials, let them pass
-    res.redirect("/login"); //not valid credentials, redirect back to login page
+    if(req.session.user) return next(); //valid credentials, let them pass
+    return res.redirect("/login"); //not valid credentials, redirect back to login page
 };
 //
 
@@ -75,7 +75,7 @@ app.get("/", (req,res)=>{
 //*8
 //Added - Login
 app.get("/users", isAuthenticated, (req,res)=>{
-    res.sendFile("users.html"); 
+    res.sendFile(path.join(__dirname, "public", "users.html")); 
 });
 
 app.get("/login", (req,res)=>{
@@ -114,26 +114,34 @@ app.post("/addperson", async (req, res)=>{
         const newPerson = new Person(req.body); //create new instance of a person
         const savePerson = await newPerson.save(); //save the new person
         //res.status(201).json(savePerson);
-        res.redirect("/");
+        res.redirect("/users");
         console.log(savePerson); //log the data that got saved
     } catch(err){
         res.status(500).json({error:"Failed to add new person."});
     }
 });
 
-//Added - Login (not working rn)
+//Added - Login
 //*9
 app.post("/login", (req, res)=>{
     const {username, password} = req.body;
     console.log(req.body);
     if(user[username] && bcrypt.compareSync(password, user[username])){
         req.session.user = username;
-        res.redirect("/users");
+        return res.redirect("/users");
     }
-    //Not valid
+    //Not valid login
     req.session.error = "Invalid User";
-    res.redirect("/login");
+    return res.redirect("/login");
 });
+
+//Added - Logout
+app.get("/logout", (req,res)=>{
+    req.session.destroy(()=>{
+        res.redirect("/login")
+    });
+});
+//
 
 //Update Route (PUT)
 app.put("/updateperson/:id", (req,res)=>{
