@@ -10,6 +10,9 @@ const bcrypt = require("bcryptjs");
 //Added - Registering Users
 const User = require("./models/User");
 const Person = require("./models/Person");
+//*16
+//Added - Hide sensitive information
+require("dotenv").config();
 
 const app = express();
 const port = process.env.port||3000; //if not environment, default to 3000
@@ -24,18 +27,20 @@ app.use(bodyParser.json());
 //Needed for Add to List
 app.use(express.urlencoded({extended:true}));
 
-//Added - Login
+//Login
 //*7
-//Sets up session variable
 app.use(session({
-    secret: "12345",
+    //*17
+    //Added - Hide sensitive information
+//  secret: "12345", //connection secret moved to .env
+    secret:process.env.SESSION_SECRET,
     resave:false,
     saveUninitialized:true,
     cookie:{secure:false} //set to true if using https (aka have a ssl certificate)
 }));
 
 //Create a fake user in our database
-//*13 - MODIFIED - Commented out for Registering Users
+//*13 - Commented out for Registering Users
 // const user = {
 //     admin:bcrypt.hashSync("12345", 10) //(secret/password, default hash value?)
 // };
@@ -48,7 +53,14 @@ function isAuthenticated(req,res,next){
 //
 
 //MongoDB connection setup
-const mongoURI = "mongodb://localhost:27017/crudapp"; // slash database //default URI
+//const mongoURI = "mongodb://localhost:27017/crudapp"; // slash database //default URI
+//*15
+//Added - Access non-local DB
+//const mongoURI = "mongodb+srv://rtester:rfayetester@cluster0.kraow.mongodb.net/"; // slash database //connection string moved to .env
+//*18
+//Added - Hide sensitive information
+const mongoURI = process.env.MONGODB_URI; // slash database 
+//
 mongoose.connect(mongoURI); 
 //deprecated:
 //mongoose.connect(mongoURI, {
