@@ -15,7 +15,7 @@ const Person = require("./models/Person");
 require("dotenv").config();
 
 const app = express();
-const port = process.env.port||3000; //if not environment, default to 3000
+const port = process.env.port||3000; //if not environment, default to 3000 //NEEDED FOR VERCEL
 //const port = 3000;
 
 //Create public folder as static
@@ -243,6 +243,10 @@ app.delete("/deleteperson/firstname", async (req,res)=>{
 }); 
 
 //Starts the server
-app.listen(port, ()=>{
-    console.log(`Server is running on port ${port}`); //string literal
+app.listen(port, ()=>{ //NEEDS TO BE SET TO PORT FOR VERCEL
+    console.log(`Server is running on port ${port}`); //string literal 
 });
+
+//Added - Project on Cloud
+//*19
+module.exports = app;
